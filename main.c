@@ -2,34 +2,69 @@
 #include <stdbool.h>
 
 struct {
-        unsigned int pc : 12;
+    unsigned int pc;
 
-        unsigned int s1 : 12;
-        unsigned int s2 : 12;
-        unsigned int s3 : 12;
+    unsigned int s1;
+    unsigned int s2;
+    unsigned int s3;
 
-        unsigned int acc : 4;
-        unsigned int carry : 1;
+    unsigned int acc;
+    unsigned int carry;
 
-        unsigned int R0 : 4;
-        unsigned int R1 : 4;
-        unsigned int R2 : 4;
-        unsigned int R3 : 4;
-        unsigned int R4 : 4;
-        unsigned int R5 : 4;
-        unsigned int R6 : 4;
-        unsigned int R7 : 4;
-        unsigned int R8 : 4;
-        unsigned int R9 : 4;
-        unsigned int RA : 4;
-        unsigned int RB : 4;
-        unsigned int RC : 4;
-        unsigned int RD : 4;
-        unsigned int RE : 4;
-        unsigned int RF : 4;
-    } reg;
+    unsigned int R0;
+    unsigned int R1;
+    unsigned int R2;
+    unsigned int R3;
+    unsigned int R4;
+    unsigned int R5;
+    unsigned int R6;
+    unsigned int R7;
+    unsigned int R8;
+    unsigned int R9;
+    unsigned int RA;
+    unsigned int RB;
+    unsigned int RC;
+    unsigned int RD;
+    unsigned int RE;
+    unsigned int RF;
+} reg;
 
-bool exec_opcode(unsigned char opcode, unsigned int temp_carry) {
+bool exec_opcode(unsigned char opcode, unsigned char OPR, unsigned char OPA, unsigned int temp_acc, unsigned int temp_carry) {
+    switch(OPR) {
+        case 0x6: //INC
+            OPA = opcode & 0x0F;
+            *(&reg.R0 + OPA) += 1;
+
+            return true;
+            break;
+        case 0xA: //LD
+            OPA = opcode & 0x0F;
+            reg.acc = *(&reg.R0 + OPA);
+
+            return true;
+            break;
+
+        case 0xB: //XCH
+            temp_acc = reg.acc;
+
+            OPA = opcode & 0x0F;
+
+            reg.acc = *(&reg.R0 + OPA);
+            *(&reg.R0 + OPA) = temp_acc;
+
+            return true;
+            break;
+
+        case 0xD: //LDM
+            reg.acc = opcode & 0x0F;
+
+            return true;
+            break;
+
+        default:
+            break;
+    }
+
     switch(opcode) {
         case 0x00: //NOP
             break;
@@ -82,7 +117,7 @@ bool exec_opcode(unsigned char opcode, unsigned int temp_carry) {
             reg.carry = 1;
             break;
         default:
-            printf("0x%x opcode not found\n", opcode);
+            printf("0x%X opcode not found\n", opcode);
             return false;
     }
 
@@ -92,6 +127,7 @@ bool exec_opcode(unsigned char opcode, unsigned int temp_carry) {
 int main() {
     unsigned char ram[640];
 
+    unsigned int temp_acc;
     unsigned int temp_carry;
 
     for(unsigned int i = 0; i <= 640; i++) {
@@ -106,23 +142,28 @@ int main() {
     reg.pc = 0;
 
     unsigned char opcode;
+
+    unsigned char OPR;
+    unsigned char OPA;
+
     unsigned int sets = 0;
 
     for(;;) {
         opcode = ram[reg.pc];
+        OPR = opcode >> 4;
 
         if(cycles == sizeof(ram) * sets) {
             reg.pc = 0;
             sets++;
         }
 
-        if(!exec_opcode(opcode, temp_carry)) {
+        if(!exec_opcode(opcode, OPR, OPA, temp_acc, temp_carry)) {
             break;
         }
 
         reg.pc++;
         cycles++;
 
-        printf("[0x%x] cycles: %d\n", opcode, cycles);
+        printf("[0x%X] cycles: %d\n", opcode, cycles);
     }
 }
